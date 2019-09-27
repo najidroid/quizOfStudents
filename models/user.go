@@ -38,8 +38,8 @@ func checkForLockedMatches() {
 }
 
 func SetUsers() []*Student {
-	var data []*Student
-	orm.NewOrm().QueryTable(new(Student)).All(&data)
+	var data []*School
+	orm.NewOrm().QueryTable(new(School)).All(&data)
 	fmt.Println(data)
 	push("topic", "hi")
 	return data
