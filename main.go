@@ -56,15 +56,6 @@ func main() {
 
 	beego.Run()
 
-	//	//	this is for chat:?
-	//	flag.Parse()
-	//	go hub.run()
-	//	http.HandleFunc("/", serveHome)
-	//	http.HandleFunc("/ws", serveWs)
-	//	err1 := http.ListenAndServe(*addr, nil)
-	//	if err1 != nil {
-	//		log.Fatal("ListenAndServe: ", err)
-	//	}
 }
 
 func SetSchools() {
@@ -113,20 +104,3 @@ func SetQuestions() {
 	}
 	fmt.Println("questions added to DB")
 }
-
-////this is for chat
-//var addr = flag.String("addr", ":8181", "http service address")
-//var homeTemplate = template.Must(template.ParseFiles("home.html"))
-
-//func serveHome(w http.ResponseWriter, r *http.Request) {
-//	if r.URL.Path != "/" {
-//		http.Error(w, "Not found", 404)
-//		return
-//	}
-//	if r.Method != "GET" {
-//		http.Error(w, "Method not allowed", 405)
-//		return
-//	}
-//	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-//	homeTemplate.Execute(w, r.Host)
-//}
