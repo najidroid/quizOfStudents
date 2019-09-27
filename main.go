@@ -26,7 +26,7 @@ import (
 func init() {
 	orm.RegisterDriver("mysql", orm.DRMySQL)
 
-	orm.RegisterDataBase("default", "mysql", "root:root@/quizofstudents?charset=utf8")
+	orm.RegisterDataBase("default", "mysql", "u0rjdhj3uers2hge:GK0UooOMJL9Yf2Jc1HAd@tcp(bfcegwfzeq1o1qcwfe2y-mysql.services.clever-cloud.com:3306)/bfcegwfzeq1o1qcwfe2y?charset=utf8")
 }
 
 func main() {
