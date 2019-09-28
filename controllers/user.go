@@ -361,3 +361,20 @@ func (u *UserController) GetFriend() {
 	u.Data["json"] = friend
 	u.ServeJSON()
 }
+
+// @Title Get
+// @Description add student
+// @Param	uid		path 	string	true		"The key for staticblock"
+// @Success 200 {object} models.User
+// @Failure 403 :uimei is empty
+// @router /changeavatar [post]
+func (u *UserController) ChangeAvatar() {
+	fmt.Println("***************CHANGING AVATAR***************")
+	var Ob models.Student
+	json.Unmarshal(u.Ctx.Input.RequestBody, &Ob)
+	fmt.Println(Ob)
+	std := models.ChangeAvatar(Ob)
+	fmt.Println("*****student is:", std)
+	u.Data["json"] = std
+	u.ServeJSON()
+}

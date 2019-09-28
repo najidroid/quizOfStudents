@@ -395,6 +395,14 @@ func GetFriend(fr Friend) *Friend {
 	return &fr
 }
 
+func ChangeAvatar(std Student) *Student {
+	student := Student{Id: std.Id}
+	orm.NewOrm().Read(&student)
+	student.AvatarCode = std.AvatarCode
+	orm.NewOrm().Update(&student)
+	return &student
+}
+
 func getDBQuestions(subject string) []*Question {
 	fmt.Println("subject:", subject)
 

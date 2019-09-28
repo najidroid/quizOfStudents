@@ -63,6 +63,15 @@ func init() {
 
     beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"] = append(beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"],
         beego.ControllerComments{
+            Method: "ChangeAvatar",
+            Router: `/changeavatar`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"] = append(beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"],
+        beego.ControllerComments{
             Method: "FriendRequest",
             Router: `/friendrequest`,
             AllowHTTPMethods: []string{"post"},
