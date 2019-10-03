@@ -13,12 +13,15 @@ import (
 	"github.com/astaxie/beego/orm"
 
 	"github.com/claudiu/gocron"
+
+	"github.com/araddon/dateparse"
 )
 
 func init() {
 	gocron.Start()
 	s := gocron.NewScheduler()
 	gocron.Every(2).Minutes().Do(checkForLockedMatches)
+	//also write gocron for updating ranks stuff
 	s.Start()
 }
 
@@ -48,7 +51,14 @@ func SetUsers() []*School {
 func GetStudent(std Student) *Student {
 	student := Student{Id: std.Id}
 	orm.NewOrm().Read(&student)
-	fmt.Println("student1 is: ", student)
+	//adding 50 coins per day if student signes in
+	LastDailyCoinTime, _ := dateparse.ParseLocal(student.LastDailyCoinTimeString)
+	if time.Now().Sub(LastDailyCoinTime).Seconds() >= 24 {
+		student.LastDailyCoinTimeString = time.Now().String()
+		student.Coin += 50
+		orm.NewOrm().Update(&student)
+	}
+	fmt.Println("student0 is: ", student)
 	orm.NewOrm().LoadRelated(&student, "Friends")
 	orm.NewOrm().LoadRelated(&student, "Matches")
 	if std.Token == student.Token {
@@ -72,7 +82,7 @@ func AddStudent(std Student) (*Student, bool) {
 	student := Student{Name: std.Name, FamilyName: std.FamilyName,
 		School: getSchool(std.School.Id), Grade: std.Grade, Field: std.Field,
 		EmailAdress: std.EmailAdress, MobileNumber: std.MobileNumber, AvatarCode: "1",
-		Token: TokenGenerator(), SchoolName: std.School.Name}
+		Token: TokenGenerator(), SchoolName: std.School.Name, Coin: 100, LastDailyCoinTimeString: time.Now().String()}
 	o.Insert(&student)
 	friend := Friend{Name: std.Name, FamilyName: std.FamilyName, MobileNumber: std.MobileNumber,
 		Grade: std.Grade, Field: std.Field, SchoolName: std.School.Name, AvatarCode: "1",
@@ -80,6 +90,22 @@ func AddStudent(std Student) (*Student, bool) {
 	o.Insert(&friend)
 	o.Commit()
 	return &student, true
+}
+
+func addMoney(amount int, id int) (int, bool) {
+	std := Student{Id: id}
+	orm.NewOrm().Read(&std)
+	fmt.Println("coins: ", std.Coin)
+	std.Coin += amount
+	_, err := orm.NewOrm().Update(&std)
+	if err != nil {
+		fmt.Println("adding money error: ", err)
+		return 0, false
+	} else {
+		fmt.Println("adding money for id=", id, ", amount=", amount)
+		push("update/id-"+strconv.Itoa(id), "MONEY-"+strconv.Itoa(std.Coin))
+		return amount, true
+	}
 }
 
 func getSchool(id int) *School {
@@ -104,7 +130,7 @@ func GetSchool(sch School) *School {
 
 func GetSchools() []*School {
 	var schools []*School
-	orm.NewOrm().QueryTable(new(School)).OrderBy("-Score").All(&schools)
+	orm.NewOrm().QueryTable(new(School)).OrderBy("-TotalScore").All(&schools)
 	return schools
 }
 
@@ -191,6 +217,7 @@ func StartMatch(match Match) *Match {
 	o.Begin()
 	frstStd := match.Students[0]
 	fmt.Println("StartMatch/ frstStd:", frstStd)
+	addMoney(-10, frstStd.Id)
 	sbMch := match.SubMatches[0]
 	subject := sbMch.Subject
 	subMatchQuestions := getDBQuestions(subject)
@@ -239,21 +266,43 @@ func UpdateSubMatch(sbMch SubMatch) *Match {
 	mch := sbMch.Match
 
 	mch.PlayedId = sbMch.PlayedId
+	if mch.State == -1 {
+		mch.State = 0
+	}
 	if mch.FirstId == 0 {
 		mch.FirstId = sbMch.FirstId
 		mch.SecondId = sbMch.SecondId
 	}
 	if mch.FirstId == sbMch.PlayedId {
-		mch.FirstTotalAnswers += getNumberOfAnswersFromString(sbMch.FirstAnswers)
+		trueAnswers := getNumberOfAnswersFromString(sbMch.FirstAnswers)
+		mch.FirstTotalAnswers += trueAnswers
+		updateLessonRank(sbMch.PlayedId, sbMch.Subject, trueAnswers)
 		push("update/id-"+strconv.Itoa(mch.SecondId), "MCH-"+strconv.Itoa(mch.Id))
 	} else {
-		mch.SecondTotalAnswers += getNumberOfAnswersFromString(sbMch.SecondAnswers)
+		trueAnswers := getNumberOfAnswersFromString(sbMch.SecondAnswers)
+		mch.SecondTotalAnswers += trueAnswers
+		updateLessonRank(sbMch.PlayedId, sbMch.Subject, trueAnswers)
 		push("update/id-"+strconv.Itoa(mch.FirstId), "MCH-"+strconv.Itoa(mch.Id))
 	}
 	o.LoadRelated(mch, "SubMatches")
 	if len(mch.SubMatches) >= 10 &&
 		len(mch.SubMatches[9].FirstAnswers) >= 3 && len(mch.SubMatches[9].SecondAnswers) >= 3 {
 		mch.State = 2
+		isSameSchool := isSameSchool(mch.FirstId, mch.SecondId)
+		if mch.FirstTotalAnswers > mch.SecondTotalAnswers {
+			addMoney(15, mch.FirstId)
+			updateStudentAndSchoolRank(mch.FirstId, 2, isSameSchool)
+			updateStudentAndSchoolRank(mch.SecondId, 0, isSameSchool)
+		} else if mch.SecondTotalAnswers > mch.FirstTotalAnswers {
+			addMoney(15, mch.SecondId)
+			updateStudentAndSchoolRank(mch.SecondId, 2, isSameSchool)
+			updateStudentAndSchoolRank(mch.FirstId, 0, isSameSchool)
+		} else {
+			addMoney(5, mch.FirstId)
+			addMoney(5, mch.SecondId)
+			updateStudentAndSchoolRank(mch.SecondId, 1, isSameSchool)
+			updateStudentAndSchoolRank(mch.FirstId, 1, isSameSchool)
+		}
 	}
 	o.Update(mch)
 	o.LoadRelated(mch, "SubMatches")
@@ -261,6 +310,82 @@ func UpdateSubMatch(sbMch SubMatch) *Match {
 	o.Commit()
 	fmt.Println("mch:", mch)
 	return mch
+}
+
+func isSameSchool(id1 int, id2 int) bool {
+	std1 := Student{Id: id1}
+	std2 := Student{Id: id2}
+	orm.NewOrm().Read(&std1)
+	orm.NewOrm().Read(&std2)
+	if std1.School.Id == std2.School.Id {
+		return true
+	} else {
+		return false
+	}
+}
+
+func updateStudentAndSchoolRank(stdId int, score int, isSameSchool bool) {
+	o := orm.NewOrm()
+	o.Begin()
+	std := Student{Id: stdId}
+	var rank StudentRank
+	o.QueryTable(new(StudentRank)).Filter("StudentId", stdId).One(&rank)
+	o.Read(&std)
+	o.LoadRelated(&std, "School")
+	sch := std.School
+	if rank.Id == 0 {
+		rank = StudentRank{StudentId: stdId}
+		o.Insert(&rank)
+	}
+	rank.TotalMatches++
+	rank.WeekScore += score
+	rank.TotalScore += score
+	rank.WeekTotalMatches++
+	if !isSameSchool {
+		sch.TotalMatches++
+		sch.TotalScore += score
+		sch.WeekScore += score
+		sch.WeekTotalMatches++
+	}
+	std.WeekScore += score
+	std.TotalScore += score
+	if score == 1 {
+		rank.EvenMatches++
+		rank.WeekEvenMatches++
+		if !isSameSchool {
+			sch.EvenMatches++
+			sch.WeekEvenMatches++
+		}
+	} else if score == 2 {
+		rank.WonMatches++
+		rank.WeekWonMatches++
+		if !isSameSchool {
+			sch.WonMatches++
+			sch.WeekWonMatches++
+		}
+	}
+	o.Update(&rank)
+	o.Update(sch)
+	o.Commit()
+}
+
+func updateLessonRank(stdId int, subj string, trueAnswers int) {
+	o := orm.NewOrm()
+	o.Begin()
+	var rank LessonRank
+	o.QueryTable(new(LessonRank)).Filter("StudentId", stdId).Filter("Subject", subj).One(&rank)
+	if rank.Id == 0 {
+		rank = LessonRank{StudentId: stdId, Subject: subj}
+		o.Insert(&rank)
+	}
+	rank.RightAnswers += trueAnswers
+	rank.TotalQuestions += 3
+	rank.TotalScore += trueAnswers
+	rank.WeekRightAnswers += trueAnswers
+	rank.WeekScore += trueAnswers
+	rank.WeekTotalQuestions += 3
+	o.Update(&rank)
+	o.Commit()
 }
 
 func getNumberOfAnswersFromString(answer string) int {
@@ -310,6 +435,7 @@ func AcceptMatch(match Match) *SubMatch {
 	if len(mch.Students) == 1 {
 		m2m := orm.NewOrm().QueryM2M(&match, "Students")
 		m2m.Add(match.Students[1])
+		addMoney(-10, match.Students[1].Id)
 		push("update/id-"+strconv.Itoa(match.Students[1].Id), "MCH-"+strconv.Itoa(match.Id))
 	}
 	return sbMch
@@ -364,6 +490,7 @@ func RequestMatch(mch Match) *Match {
 	o.Commit()
 	//	push("update/id-"+strconv.Itoa(std1.Id), "MCH")
 	push("update/id-"+strconv.Itoa(std2.Id), "MCH-"+strconv.Itoa(mch.Id))
+	addMoney(-10, std1.Id)
 	return &mch
 }
 
@@ -387,6 +514,11 @@ func AcceptMatchRequest(mch Match) *Match {
 	fmt.Println("std2.RequestedMatch", std2.RequestedMatch)
 	o.Commit()
 	push("update/id-"+strconv.Itoa(std1.Id), "MCH-"+strconv.Itoa(mch.Id))
+	if mch.FirstId == std1.Id {
+		addMoney(-10, std2.Id)
+	} else {
+		addMoney(-10, std1.Id)
+	}
 	return &mch
 }
 
@@ -400,6 +532,7 @@ func ChangeAvatar(std Student) *Student {
 	orm.NewOrm().Read(&student)
 	student.AvatarCode = std.AvatarCode
 	orm.NewOrm().Update(&student)
+	addMoney(-20, std.Id)
 	return &student
 }
 

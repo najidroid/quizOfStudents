@@ -45,12 +45,22 @@ func push(subscription string, message string) {
 }
 
 type School struct {
-	Id       int
-	Name     string
-	City     string
-	Region   int
-	Score    int
-	Students []*Student `orm:"reverse(many)"`
+	Id               int
+	Students         []*Student `orm:"reverse(many)"`
+	Name             string
+	City             string
+	Region           int
+	TotalScore       int
+	WeekScore        int
+	WonMatches       int
+	TotalMatches     int
+	EvenMatches      int
+	WeekWonMatches   int
+	WeekTotalMatches int
+	WeekEvenMatches  int
+	TotalRank        int
+	WeekRank         int
+	WeekRankArray    string
 }
 
 type Student struct {
@@ -68,13 +78,52 @@ type Student struct {
 	//friend request that send to this student
 	FriendRequests string `orm:"size(500)"`
 	//friend requests that send by this student
-	RequestedFriends string `orm:"size(500)"`
-	Grade            string
-	Field            string
-	EmailAdress      string
-	MobileNumber     string `orm:"unique"`
-	AvatarCode       string
-	Token            string `orm:"size(500)"`
+	RequestedFriends        string `orm:"size(500)"`
+	Grade                   string
+	Field                   string
+	EmailAdress             string
+	MobileNumber            string `orm:"unique"`
+	AvatarCode              string
+	Coin                    int
+	LastDailyCoinTimeString string
+	TotalScore              int
+	WeekScore               int
+	Token                   string `orm:"size(500)"`
+}
+
+type StudentRank struct {
+	Id                  int
+	StudentId           int
+	WonMatches          int
+	TotalMatches        int
+	EvenMatches         int
+	WeekWonMatches      int
+	WeekTotalMatches    int
+	WeekEvenMatches     int
+	TotalScore          int
+	WeekScore           int
+	TotalRank           int
+	WeekRank            int
+	SchoolTotalRank     int
+	SchoolWeekRank      int
+	WeekRankArray       string
+	SchoolWeekRankArray string
+}
+
+type LessonRank struct {
+	Id                 int
+	StudentId          int
+	Subject            string
+	RightAnswers       int
+	TotalQuestions     int
+	WeekRightAnswers   int
+	WeekTotalQuestions int
+	TotalScore         int
+	WeekScore          int
+	TotalRank          int
+	WeekRank           int
+	WeekRankArray      string
+	WeekPercentsArray  string
 }
 
 type Friend struct {
@@ -91,13 +140,6 @@ type Friend struct {
 	//0 means first send friend request to second, 1 means second sent friend request to first
 	//2 means friend
 	//	FriendshipState int
-}
-
-type Rank struct {
-	Id      int
-	Student *Student `orm:"rel(fk)"`
-	Subject string
-	Score   int
 }
 
 type Match struct {
@@ -164,5 +206,5 @@ type Question struct {
 
 func init() {
 	orm.RegisterModel(new(Student), new(School), new(Match), new(Question),
-		new(Friend), new(SubMatch), new(Rank))
+		new(Friend), new(SubMatch), new(LessonRank), new(StudentRank))
 }
