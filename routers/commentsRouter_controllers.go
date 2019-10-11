@@ -144,6 +144,15 @@ func init() {
 
     beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"] = append(beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"],
         beego.ControllerComments{
+            Method: "GetStudentRank",
+            Router: `/getstudentrank`,
+            AllowHTTPMethods: []string{"post"},
+            MethodParams: param.Make(),
+            Filters: nil,
+            Params: nil})
+
+    beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"] = append(beego.GlobalControllerRouter["github.com/najidroid/quizOfStudents/controllers:UserController"],
+        beego.ControllerComments{
             Method: "GetSubMatch",
             Router: `/getsubmatch`,
             AllowHTTPMethods: []string{"post"},

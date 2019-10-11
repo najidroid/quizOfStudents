@@ -98,8 +98,8 @@ func AddStudent(std Student) (*Student, bool) {
 	addLessonRank(stdRank, "دینی")
 	addLessonRank(stdRank, "زبان")
 	addLessonRank(stdRank, "ریاضی")
+	addLessonRank(stdRank, "فیزیک")
 	addLessonRank(stdRank, "شیمی")
-	addLessonRank(stdRank, "زیست")
 	o.Commit()
 	return &student, true
 }
@@ -109,7 +109,9 @@ func addLessonRank(stdRank StudentRank, subject string) {
 	o.Begin()
 	tr := rand.Intn(1000)
 	wr := rand.Intn(500)
-	lsnRank := LessonRank{StudentId: stdRank.StudentId, Subject: subject, TotalRightAnswers: 354, TotalQuestions: 864,
+	tra := rand.Intn(500)
+	tq := rand.Intn(200) + tra
+	lsnRank := LessonRank{StudentId: stdRank.StudentId, Subject: subject, TotalRightAnswers: tra, TotalQuestions: tq,
 		WeekRightAnswers: 37, WeekTotalQuestions: 34, TotalScore: 235, WeekScore: 123, TotalRank: tr, WeekRank: wr,
 		WeekRankArray: "-1--65--51--8--56--457--23--4562--12--564--75-", WeekPercentsArray: "-1--5--7--4--1--5--15--8--28--24-",
 		StudentRank: &stdRank}
@@ -560,6 +562,16 @@ func ChangeAvatar(std Student) *Student {
 	orm.NewOrm().Update(&student)
 	addMoney(-20, std.Id)
 	return &student
+}
+
+func GetStudentRank(std Student) *StudentRank {
+	o := orm.NewOrm()
+	o.Begin()
+	var stdRank StudentRank
+	o.QueryTable(new(StudentRank)).Filter("StudentId", std.Id).One(&stdRank)
+	o.LoadRelated(&stdRank, "LessonRanks")
+	o.Commit()
+	return &stdRank
 }
 
 func getDBQuestions(subject string) []*Question {

@@ -378,3 +378,20 @@ func (u *UserController) ChangeAvatar() {
 	u.Data["json"] = std
 	u.ServeJSON()
 }
+
+// @Title Get
+// @Description add student
+// @Param	uid		path 	string	true		"The key for staticblock"
+// @Success 200 {object} models.User
+// @Failure 403 :uimei is empty
+// @router /getstudentrank [post]
+func (u *UserController) GetStudentRank() {
+	fmt.Println("***************GET Student Rank***************")
+	var Ob models.Student
+	json.Unmarshal(u.Ctx.Input.RequestBody, &Ob)
+	fmt.Println(Ob)
+	stdRank := models.GetStudentRank(Ob)
+	fmt.Println("*****student rank is:", stdRank)
+	u.Data["json"] = stdRank
+	u.ServeJSON()
+}
