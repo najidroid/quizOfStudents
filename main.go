@@ -36,10 +36,10 @@ func main() {
 	name := "default"
 
 	// Drop table and re-create.
-	force := false
+	force := true
 
 	// Print log.
-	verbose := false
+	verbose := true
 
 	// Error.
 	err := orm.RunSyncdb(name, force, verbose)

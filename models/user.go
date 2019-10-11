@@ -88,8 +88,34 @@ func AddStudent(std Student) (*Student, bool) {
 		Grade: std.Grade, Field: std.Field, SchoolName: std.School.Name, AvatarCode: "1",
 		StudentId: student.Id}
 	o.Insert(&friend)
+	stdRank := StudentRank{StudentId: student.Id, WonMatches: 100, TotalMatches: 370, WeekWonMatches: 4,
+		WeekTotalMatches: 30, TotalScore: 245, WeekScore: 124, TotalRank: 15, WeekRank: 24, SchoolTotalRank: 4,
+		SchoolWeekRank: 2, WeekRankArray: "-1--65--51--8--56--457--23--4562--12--564--75-",
+		SchoolWeekRankArray: "-1--5--7--4--1--5--15--8--28--24-"}
+	o.Insert(&stdRank)
+	addLessonRank(stdRank, "ادبیات")
+	addLessonRank(stdRank, "عربی")
+	addLessonRank(stdRank, "دینی")
+	addLessonRank(stdRank, "زبان")
+	addLessonRank(stdRank, "ریاضی")
+	addLessonRank(stdRank, "شیمی")
+	addLessonRank(stdRank, "زیست")
 	o.Commit()
 	return &student, true
+}
+
+func addLessonRank(stdRank StudentRank, subject string) {
+	o := orm.NewOrm()
+	o.Begin()
+	tr := rand.Intn(1000)
+	wr := rand.Intn(500)
+	lsnRank := LessonRank{StudentId: stdRank.StudentId, Subject: subject, TotalRightAnswers: 354, TotalQuestions: 864,
+		WeekRightAnswers: 37, WeekTotalQuestions: 34, TotalScore: 235, WeekScore: 123, TotalRank: tr, WeekRank: wr,
+		WeekRankArray: "-1--65--51--8--56--457--23--4562--12--564--75-", WeekPercentsArray: "-1--5--7--4--1--5--15--8--28--24-",
+		StudentRank: &stdRank}
+	o.Insert(&lsnRank)
+	o.Commit()
+
 }
 
 func addMoney(amount int, id int) (int, bool) {
@@ -350,8 +376,8 @@ func updateStudentAndSchoolRank(stdId int, score int, isSameSchool bool) {
 	std.WeekScore += score
 	std.TotalScore += score
 	if score == 1 {
-		rank.EvenMatches++
-		rank.WeekEvenMatches++
+		//		rank.EvenMatches++
+		//		rank.WeekEvenMatches++
 		if !isSameSchool {
 			sch.EvenMatches++
 			sch.WeekEvenMatches++
@@ -378,7 +404,7 @@ func updateLessonRank(stdId int, subj string, trueAnswers int) {
 		rank = LessonRank{StudentId: stdId, Subject: subj}
 		o.Insert(&rank)
 	}
-	rank.RightAnswers += trueAnswers
+	rank.TotalRightAnswers += trueAnswers
 	rank.TotalQuestions += 3
 	rank.TotalScore += trueAnswers
 	rank.WeekRightAnswers += trueAnswers

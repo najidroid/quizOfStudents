@@ -96,10 +96,8 @@ type StudentRank struct {
 	StudentId           int
 	WonMatches          int
 	TotalMatches        int
-	EvenMatches         int
 	WeekWonMatches      int
 	WeekTotalMatches    int
-	WeekEvenMatches     int
 	TotalScore          int
 	WeekScore           int
 	TotalRank           int
@@ -108,13 +106,14 @@ type StudentRank struct {
 	SchoolWeekRank      int
 	WeekRankArray       string
 	SchoolWeekRankArray string
+	LessonRanks         []*LessonRank `orm:"reverse(many)"`
 }
 
 type LessonRank struct {
 	Id                 int
 	StudentId          int
 	Subject            string
-	RightAnswers       int
+	TotalRightAnswers  int
 	TotalQuestions     int
 	WeekRightAnswers   int
 	WeekTotalQuestions int
@@ -124,6 +123,7 @@ type LessonRank struct {
 	WeekRank           int
 	WeekRankArray      string
 	WeekPercentsArray  string
+	StudentRank        *StudentRank `orm:"rel(fk)"`
 }
 
 type Friend struct {
