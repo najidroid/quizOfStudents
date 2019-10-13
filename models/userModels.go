@@ -152,14 +152,16 @@ type Match struct {
 	FirstTotalAnswers  int
 	SecondTotalAnswers int
 	//0 means need oponent, 1 means started but not finished yet, 2 means finished
-	State         int
-	PlayedId      int
-	ShowInClient1 bool
-	ShowInClient2 bool
-	SubMatches    []*SubMatch `orm:"reverse(many)"`
-	Time          time.Time   `orm:"auto_now_add;type(datetime)"`
-	IsLocked      bool
-	LockTime      time.Time `orm:"auto_now_add;type(datetime)"`
+	State            int
+	PlayedId         int
+	ShowInClient1    bool
+	ShowInClient2    bool
+	FirstAvatarCode  string
+	SecondAvatarCode string
+	SubMatches       []*SubMatch `orm:"reverse(many)"`
+	Time             time.Time   `orm:"auto_now_add;type(datetime)"`
+	IsLocked         bool
+	LockTime         time.Time `orm:"auto_now_add;type(datetime)"`
 }
 
 type SubMatch struct {

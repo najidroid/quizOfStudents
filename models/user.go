@@ -90,7 +90,7 @@ func AddStudent(std Student) (*Student, bool) {
 	o.Insert(&friend)
 	stdRank := StudentRank{StudentId: student.Id, WonMatches: 100, TotalMatches: 370, WeekWonMatches: 4,
 		WeekTotalMatches: 30, TotalScore: 245, WeekScore: 124, TotalRank: 15, WeekRank: 24, SchoolTotalRank: 4,
-		SchoolWeekRank: 2, WeekRankArray: "-1--65--51--8--56--457--23--4562--12--564--75-",
+		SchoolWeekRank: 2, WeekRankArray: "-1--65--444--8--56--238--23--124--12--421--75-",
 		SchoolWeekRankArray: "-1--5--7--4--1--5--15--8--28--24-"}
 	o.Insert(&stdRank)
 	addLessonRank(stdRank, "ادبیات")
@@ -457,6 +457,13 @@ func AcceptMatch(match Match) *SubMatch {
 	orm.NewOrm().LoadRelated(&mch, "Students")
 	fmt.Println("mch is:", mch)
 	sbMch := match.SubMatches[0]
+	if mch.FirstId == mch.Students[0].Id {
+		mch.FirstAvatarCode = mch.Students[0].AvatarCode
+		mch.SecondAvatarCode = mch.Students[1].AvatarCode
+	} else {
+		mch.FirstAvatarCode = mch.Students[1].AvatarCode
+		mch.SecondAvatarCode = mch.Students[0].AvatarCode
+	}
 	orm.NewOrm().Update(&match)
 	orm.NewOrm().Update(sbMch)
 	orm.NewOrm().LoadRelated(sbMch, "Questions")
