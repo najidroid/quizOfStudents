@@ -457,12 +457,12 @@ func AcceptMatch(match Match) *SubMatch {
 	orm.NewOrm().LoadRelated(&mch, "Students")
 	fmt.Println("mch is:", mch)
 	sbMch := match.SubMatches[0]
-	if mch.FirstId == mch.Students[0].Id {
-		mch.FirstAvatarCode = mch.Students[0].AvatarCode
-		mch.SecondAvatarCode = mch.Students[1].AvatarCode
+	if mch.FirstId == match.Students[0].Id {
+		match.FirstAvatarCode = match.Students[0].AvatarCode
+		match.SecondAvatarCode = match.Students[1].AvatarCode
 	} else {
-		mch.FirstAvatarCode = mch.Students[1].AvatarCode
-		mch.SecondAvatarCode = mch.Students[0].AvatarCode
+		match.FirstAvatarCode = match.Students[1].AvatarCode
+		match.SecondAvatarCode = match.Students[0].AvatarCode
 	}
 	orm.NewOrm().Update(&match)
 	orm.NewOrm().Update(sbMch)
