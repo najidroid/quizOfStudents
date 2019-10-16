@@ -60,17 +60,18 @@ type School struct {
 	WeekEvenMatches  int
 	TotalRank        int
 	WeekRank         int
-	WeekRankArray    string
+	WeekRankArray    string `orm:"size(500)"`
 }
 
 type Student struct {
-	Id         int
-	Name       string
-	FamilyName string
-	SchoolName string
-	School     *School   `orm:"rel(fk)"`
-	Friends    []*Friend `orm:"rel(m2m)"`
-	Matches    []*Match  `orm:"rel(m2m)"`
+	Id          int
+	Name        string
+	FamilyName  string
+	SchoolName  string
+	School      *School      `orm:"rel(fk)"`
+	Friends     []*Friend    `orm:"rel(m2m)"`
+	Matches     []*Match     `orm:"rel(m2m)"`
+	StudentRank *StudentRank `orm:"null;rel(one);on_delete(set_null)"`
 	//match requests that send by this student
 	RequestedMatch string
 	//match request that send to this student
@@ -93,7 +94,7 @@ type Student struct {
 
 type StudentRank struct {
 	Id                  int
-	StudentId           int
+	Student             *Student `orm:"reverse(one)"`
 	WonMatches          int
 	TotalMatches        int
 	WeekWonMatches      int
@@ -104,8 +105,8 @@ type StudentRank struct {
 	WeekRank            int
 	SchoolTotalRank     int
 	SchoolWeekRank      int
-	WeekRankArray       string
-	SchoolWeekRankArray string
+	WeekRankArray       string        `orm:"size(500)"`
+	SchoolWeekRankArray string        `orm:"size(500)"`
 	LessonRanks         []*LessonRank `orm:"reverse(many)"`
 }
 
@@ -121,8 +122,8 @@ type LessonRank struct {
 	WeekScore          int
 	TotalRank          int
 	WeekRank           int
-	WeekRankArray      string
-	WeekPercentsArray  string
+	WeekRankArray      string       `orm:"size(500)"`
+	WeekPercentsArray  string       `orm:"size(500)"`
 	StudentRank        *StudentRank `orm:"rel(fk)"`
 }
 

@@ -21,8 +21,62 @@ func init() {
 	gocron.Start()
 	s := gocron.NewScheduler()
 	gocron.Every(2).Minutes().Do(checkForLockedMatches)
-	//also write gocron for updating ranks stuff
+	gocron.Every(1).Friday().At("10:30").Do(UpdateRanksInFriday)
 	s.Start()
+}
+
+func UpdateRanksInFriday() {
+	fmt.Println("***************UPDATING RANKS***************")
+	o := orm.NewOrm()
+	var ranks []*StudentRank
+	o.QueryTable("StudentRank").All(&ranks)
+
+	for _, item := range ranks {
+		o.LoadRelated(item, "LessonRanks")
+		lsnRanks := item.LessonRanks
+		for _, itm := range lsnRanks {
+			updateLessonRankInFriday(itm)
+		}
+		updateStudentRankInFriday(item)
+	}
+
+	var schools []*School
+	o.QueryTable("School").All(&schools)
+	for _, item := range schools {
+		updateSchoolInFriday(item)
+	}
+}
+
+func updateSchoolInFriday(school *School) {
+	school.WeekWonMatches = 0
+	school.WeekTotalMatches = 0
+	school.WeekEvenMatches = 0
+	school.WeekRankArray += "-" + strconv.Itoa(school.WeekRank) + "-"
+	orm.NewOrm().Update(school)
+}
+
+func updateStudentRankInFriday(stdRank *StudentRank) {
+	stdRank.WeekRankArray += "-" + strconv.Itoa(stdRank.WeekRank) + "-"
+	stdRank.SchoolWeekRankArray += "-" + strconv.Itoa(stdRank.SchoolWeekRank) + "-"
+	stdRank.WeekWonMatches = 0
+	stdRank.WeekTotalMatches = 0
+	stdRank.WeekScore = 0
+	fmt.Println("student rank:", stdRank)
+	orm.NewOrm().Update(stdRank)
+}
+
+func updateLessonRankInFriday(lessonRank *LessonRank) {
+	if lessonRank.WeekTotalQuestions != 0 {
+		lessonRank.WeekPercentsArray += "-" + strconv.Itoa(100*lessonRank.WeekRightAnswers/lessonRank.WeekTotalQuestions) + "-"
+	} else {
+		lessonRank.WeekPercentsArray += "-0-"
+	}
+	lessonRank.WeekRankArray += "-" + strconv.Itoa(lessonRank.WeekRank) + "-"
+	lessonRank.WeekRightAnswers = 0
+	lessonRank.WeekTotalQuestions = 0
+	lessonRank.WeekScore = 0
+	fmt.Println("lesson rank:", lessonRank)
+	orm.NewOrm().Update(lessonRank)
 }
 
 func checkForLockedMatches() {
@@ -41,11 +95,12 @@ func checkForLockedMatches() {
 }
 
 func SetUsers() []*School {
-	var data []*School
-	orm.NewOrm().QueryTable(new(School)).All(&data)
-	fmt.Println(data)
+	//	var data []*School
+	//	orm.NewOrm().QueryTable(new(School)).All(&data)
+	//	fmt.Println(data)
 	push("topic", "hi")
-	return data
+	UpdateRanksInFriday()
+	return nil
 }
 
 func GetStudent(std Student) *Student {
@@ -79,7 +134,9 @@ func GetMyFriends(std Student) []*Friend {
 func AddStudent(std Student) (*Student, bool) {
 	o := orm.NewOrm()
 	o.Begin()
-	student := Student{Name: std.Name, FamilyName: std.FamilyName,
+	stdRank := StudentRank{}
+	_, err := o.Insert(&stdRank)
+	student := Student{StudentRank: &stdRank, Name: std.Name, FamilyName: std.FamilyName,
 		School: getSchool(std.School.Id), Grade: std.Grade, Field: std.Field,
 		EmailAdress: std.EmailAdress, MobileNumber: std.MobileNumber, AvatarCode: "1",
 		Token: TokenGenerator(), SchoolName: std.School.Name, Coin: 100, LastDailyCoinTimeString: time.Now().String()}
@@ -88,36 +145,15 @@ func AddStudent(std Student) (*Student, bool) {
 		Grade: std.Grade, Field: std.Field, SchoolName: std.School.Name, AvatarCode: "1",
 		StudentId: student.Id}
 	o.Insert(&friend)
-	stdRank := StudentRank{StudentId: student.Id, WonMatches: 100, TotalMatches: 370, WeekWonMatches: 4,
-		WeekTotalMatches: 30, TotalScore: 245, WeekScore: 124, TotalRank: 15, WeekRank: 24, SchoolTotalRank: 4,
-		SchoolWeekRank: 2, WeekRankArray: "-1--65--444--8--56--238--23--124--12--421--75-",
-		SchoolWeekRankArray: "-1--5--7--4--1--5--15--8--28--24-"}
-	o.Insert(&stdRank)
-	addLessonRank(stdRank, "ادبیات")
-	addLessonRank(stdRank, "عربی")
-	addLessonRank(stdRank, "دینی")
-	addLessonRank(stdRank, "زبان")
-	addLessonRank(stdRank, "ریاضی")
-	addLessonRank(stdRank, "فیزیک")
-	addLessonRank(stdRank, "شیمی")
+
+	fmt.Println("err is:", err)
+	fmt.Println("student rank is:", stdRank)
+	fmt.Println("student is:", student)
+	o.Read(&stdRank)
+	fmt.Println("student rank is:", stdRank)
+
 	o.Commit()
 	return &student, true
-}
-
-func addLessonRank(stdRank StudentRank, subject string) {
-	o := orm.NewOrm()
-	o.Begin()
-	tr := rand.Intn(1000)
-	wr := rand.Intn(500)
-	tra := rand.Intn(500)
-	tq := rand.Intn(200) + tra
-	lsnRank := LessonRank{StudentId: stdRank.StudentId, Subject: subject, TotalRightAnswers: tra, TotalQuestions: tq,
-		WeekRightAnswers: 37, WeekTotalQuestions: 34, TotalScore: 235, WeekScore: 123, TotalRank: tr, WeekRank: wr,
-		WeekRankArray: "-1--65--51--8--56--457--23--4562--12--564--75-", WeekPercentsArray: "-1--5--7--4--1--5--15--8--28--24-",
-		StudentRank: &stdRank}
-	o.Insert(&lsnRank)
-	o.Commit()
-
 }
 
 func addMoney(amount int, id int) (int, bool) {
@@ -356,19 +392,15 @@ func updateStudentAndSchoolRank(stdId int, score int, isSameSchool bool) {
 	o := orm.NewOrm()
 	o.Begin()
 	std := Student{Id: stdId}
-	var rank StudentRank
-	o.QueryTable(new(StudentRank)).Filter("StudentId", stdId).One(&rank)
 	o.Read(&std)
 	o.LoadRelated(&std, "School")
+	o.LoadRelated(&std, "StudentRank")
 	sch := std.School
-	if rank.Id == 0 {
-		rank = StudentRank{StudentId: stdId}
-		o.Insert(&rank)
-	}
-	rank.TotalMatches++
-	rank.WeekScore += score
-	rank.TotalScore += score
-	rank.WeekTotalMatches++
+	stdRank := std.StudentRank
+	stdRank.TotalMatches++
+	stdRank.WeekScore += score
+	stdRank.TotalScore += score
+	stdRank.WeekTotalMatches++
 	if !isSameSchool {
 		sch.TotalMatches++
 		sch.TotalScore += score
@@ -385,14 +417,14 @@ func updateStudentAndSchoolRank(stdId int, score int, isSameSchool bool) {
 			sch.WeekEvenMatches++
 		}
 	} else if score == 2 {
-		rank.WonMatches++
-		rank.WeekWonMatches++
+		stdRank.WonMatches++
+		stdRank.WeekWonMatches++
 		if !isSameSchool {
 			sch.WonMatches++
 			sch.WeekWonMatches++
 		}
 	}
-	o.Update(&rank)
+	o.Update(stdRank)
 	o.Update(sch)
 	o.Commit()
 }
@@ -402,17 +434,28 @@ func updateLessonRank(stdId int, subj string, trueAnswers int) {
 	o.Begin()
 	var rank LessonRank
 	o.QueryTable(new(LessonRank)).Filter("StudentId", stdId).Filter("Subject", subj).One(&rank)
+	fmt.Println("rank is:", rank)
 	if rank.Id == 0 {
-		rank = LessonRank{StudentId: stdId, Subject: subj}
-		o.Insert(&rank)
+		std := Student{Id: stdId}
+		o.LoadRelated(&std, "StudentRank")
+		fmt.Println("student rank is:", std.StudentRank)
+		rank = LessonRank{StudentId: stdId, Subject: subj, StudentRank: std.StudentRank}
+		_, err := o.Insert(&rank)
+		fmt.Println(err)
 	}
+	fmt.Println("rank is:", rank)
+
 	rank.TotalRightAnswers += trueAnswers
 	rank.TotalQuestions += 3
 	rank.TotalScore += trueAnswers
 	rank.WeekRightAnswers += trueAnswers
 	rank.WeekScore += trueAnswers
 	rank.WeekTotalQuestions += 3
+	fmt.Println("rank is:", rank)
+
 	o.Update(&rank)
+	fmt.Println("rank is:", rank)
+
 	o.Commit()
 }
 
@@ -573,12 +616,9 @@ func ChangeAvatar(std Student) *Student {
 
 func GetStudentRank(std Student) *StudentRank {
 	o := orm.NewOrm()
-	o.Begin()
-	var stdRank StudentRank
-	o.QueryTable(new(StudentRank)).Filter("StudentId", std.Id).One(&stdRank)
-	o.LoadRelated(&stdRank, "LessonRanks")
-	o.Commit()
-	return &stdRank
+	o.LoadRelated(&std, "StudentRank")
+	o.LoadRelated(std.StudentRank, "LessonRanks")
+	return std.StudentRank
 }
 
 func getDBQuestions(subject string) []*Question {
