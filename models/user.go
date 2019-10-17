@@ -21,62 +21,9 @@ func init() {
 	gocron.Start()
 	s := gocron.NewScheduler()
 	gocron.Every(2).Minutes().Do(checkForLockedMatches)
+	gocron.Every(1).Friday().At("10:30").Do(updateRankOrdersInFriday)
 	gocron.Every(1).Friday().At("10:30").Do(UpdateRanksInFriday)
 	s.Start()
-}
-
-func UpdateRanksInFriday() {
-	fmt.Println("***************UPDATING RANKS***************")
-	o := orm.NewOrm()
-	var ranks []*StudentRank
-	o.QueryTable("StudentRank").All(&ranks)
-
-	for _, item := range ranks {
-		o.LoadRelated(item, "LessonRanks")
-		lsnRanks := item.LessonRanks
-		for _, itm := range lsnRanks {
-			updateLessonRankInFriday(itm)
-		}
-		updateStudentRankInFriday(item)
-	}
-
-	var schools []*School
-	o.QueryTable("School").All(&schools)
-	for _, item := range schools {
-		updateSchoolInFriday(item)
-	}
-}
-
-func updateSchoolInFriday(school *School) {
-	school.WeekWonMatches = 0
-	school.WeekTotalMatches = 0
-	school.WeekEvenMatches = 0
-	school.WeekRankArray += "-" + strconv.Itoa(school.WeekRank) + "-"
-	orm.NewOrm().Update(school)
-}
-
-func updateStudentRankInFriday(stdRank *StudentRank) {
-	stdRank.WeekRankArray += "-" + strconv.Itoa(stdRank.WeekRank) + "-"
-	stdRank.SchoolWeekRankArray += "-" + strconv.Itoa(stdRank.SchoolWeekRank) + "-"
-	stdRank.WeekWonMatches = 0
-	stdRank.WeekTotalMatches = 0
-	stdRank.WeekScore = 0
-	fmt.Println("student rank:", stdRank)
-	orm.NewOrm().Update(stdRank)
-}
-
-func updateLessonRankInFriday(lessonRank *LessonRank) {
-	if lessonRank.WeekTotalQuestions != 0 {
-		lessonRank.WeekPercentsArray += "-" + strconv.Itoa(100*lessonRank.WeekRightAnswers/lessonRank.WeekTotalQuestions) + "-"
-	} else {
-		lessonRank.WeekPercentsArray += "-0-"
-	}
-	lessonRank.WeekRankArray += "-" + strconv.Itoa(lessonRank.WeekRank) + "-"
-	lessonRank.WeekRightAnswers = 0
-	lessonRank.WeekTotalQuestions = 0
-	lessonRank.WeekScore = 0
-	fmt.Println("lesson rank:", lessonRank)
-	orm.NewOrm().Update(lessonRank)
 }
 
 func checkForLockedMatches() {
@@ -99,6 +46,7 @@ func SetUsers() []*School {
 	//	orm.NewOrm().QueryTable(new(School)).All(&data)
 	//	fmt.Println(data)
 	push("topic", "hi")
+	updateRankOrdersInFriday()
 	UpdateRanksInFriday()
 	return nil
 }
