@@ -22,7 +22,7 @@ func init() {
 	s := gocron.NewScheduler()
 	gocron.Every(2).Minutes().Do(checkForLockedMatches)
 	gocron.Every(1).Friday().At("10:30").Do(updateRankOrdersInFriday)
-	gocron.Every(1).Friday().At("10:30").Do(UpdateRanksInFriday)
+	gocron.Every(1).Friday().At("11:00").Do(UpdateRanksInFriday)
 	s.Start()
 }
 
@@ -228,7 +228,6 @@ func StartMatch(match Match) *Match {
 	o := orm.NewOrm()
 	o.Begin()
 	frstStd := match.Students[0]
-	fmt.Println("StartMatch/ frstStd:", frstStd)
 	addMoney(-10, frstStd.Id)
 	sbMch := match.SubMatches[0]
 	subject := sbMch.Subject
@@ -253,6 +252,9 @@ func StartMatch(match Match) *Match {
 func StartMatchForFriendReq(match Match) *Match {
 	o := orm.NewOrm()
 	o.Begin()
+
+	//has to do it:	addMoney(-10, frstStd.Id)
+
 	sbMch := match.SubMatches[0]
 	subject := sbMch.Subject
 	subMatchQuestions := getDBQuestions(subject)
@@ -277,7 +279,7 @@ func UpdateSubMatch(sbMch SubMatch) *Match {
 	o.LoadRelated(&sbMch, "Match")
 	mch := sbMch.Match
 
-	mch.PlayedId = sbMch.PlayedId
+	//mch.PlayedId = sbMch.PlayedId
 	if mch.State == -1 {
 		mch.State = 0
 	}
@@ -295,6 +297,12 @@ func UpdateSubMatch(sbMch SubMatch) *Match {
 		mch.SecondTotalAnswers += trueAnswers
 		updateLessonRank(sbMch.PlayedId, sbMch.Subject, trueAnswers)
 		push("update/id-"+strconv.Itoa(mch.FirstId), "MCH-"+strconv.Itoa(mch.Id))
+	}
+	mch.TurnQuestionNumber++
+	if mch.TurnQuestionNumber == 2 {
+		mch.TurnQuestionNumber = 0
+		mch.TurnId = mch.FirstId + mch.SecondId - mch.TurnId
+		push("update/id-"+strconv.Itoa(mch.TurnId), "MCH-"+strconv.Itoa(mch.Id))
 	}
 	o.LoadRelated(mch, "SubMatches")
 	if len(mch.SubMatches) >= 10 &&
@@ -455,6 +463,9 @@ func AcceptMatch(match Match) *SubMatch {
 		match.FirstAvatarCode = match.Students[1].AvatarCode
 		match.SecondAvatarCode = match.Students[0].AvatarCode
 	}
+	match.TurnId = match.SecondId
+	match.TurnQuestionNumber = 0
+	fmt.Println("turn id:", match.TurnId)
 	orm.NewOrm().Update(&match)
 	orm.NewOrm().Update(sbMch)
 	orm.NewOrm().LoadRelated(sbMch, "Questions")
@@ -476,19 +487,19 @@ func AddSubMatch(match Match) *SubMatch {
 	sbMch := SubMatch{Subject: sm.Subject, FirstId: sm.FirstId, SecondId: sm.SecondId, FirstName: sm.FirstName,
 		FirstFamilyName: sm.FirstFamilyName, SecondName: sm.SecondName, SecondFamilyName: sm.SecondFamilyName,
 		State: 0, Questions: subMatchQuestions, Match: &match}
-	match.PlayedId = sm.PlayedId
-	var opId int
-	if match.PlayedId == sm.FirstId {
-		opId = sm.FirstId
-	} else {
-		opId = sm.SecondId
-	}
+	//	match.PlayedId = sm.PlayedId
+	//	var opId int
+	//	if match.PlayedId == sm.FirstId {
+	//		opId = sm.FirstId
+	//	} else {
+	//		opId = sm.SecondId
+	//	}
 	o.Insert(&sbMch)
 	o.Update(&match)
 	m2m := o.QueryM2M(&sbMch, "Questions")
 	m2m.Add(subMatchQuestions)
 	o.Commit()
-	push("update/id-"+strconv.Itoa(opId), "MCH-"+strconv.Itoa(match.Id))
+	//	push("update/id-"+strconv.Itoa(opId), "MCH-"+strconv.Itoa(match.Id))
 	return &sbMch
 }
 
@@ -501,10 +512,16 @@ func RequestMatch(mch Match) *Match {
 	o.Read(std1)
 	mch.FirstOpName = std1.Name
 	mch.SecondOpName = std2.Name
+	mch.FirstAvatarCode = std1.AvatarCode
+	mch.SecondAvatarCode = std2.AvatarCode
+	mch.FirstId = std1.Id
+	mch.SecondId = std2.Id
 	mch.State = 1
 	mch.ShowInClient1 = true
 	mch.ShowInClient2 = true
-	mch.PlayedId = std1.Id
+	//	mch.PlayedId = std1.Id
+	mch.TurnId = std2.Id
+	mch.TurnQuestionNumber = 1
 	o.Insert(&mch)
 	std1.RequestedMatch += "," + strconv.Itoa(mch.Id) + ","
 	std2.MatchRequests += "," + strconv.Itoa(mch.Id) + ","
@@ -521,6 +538,7 @@ func RequestMatch(mch Match) *Match {
 }
 
 func AcceptMatchRequest(mch Match) *Match {
+	fmt.Println("match:", mch)
 	o := orm.NewOrm()
 	o.Begin()
 	o.LoadRelated(&mch, "Students")
@@ -528,8 +546,6 @@ func AcceptMatchRequest(mch Match) *Match {
 	std2 := mch.Students[1]
 	o.Read(std2)
 	o.Read(std1)
-	fmt.Println("std1.RequestedMatch", std1.RequestedMatch)
-	fmt.Println("std2.RequestedMatch", std2.RequestedMatch)
 	std1.RequestedMatch = strings.Replace(std1.RequestedMatch, ","+strconv.Itoa(mch.Id)+",", "", -1)
 	std2.MatchRequests = strings.Replace(std2.MatchRequests, ","+strconv.Itoa(mch.Id)+",", "", -1)
 	std2.RequestedMatch = strings.Replace(std2.RequestedMatch, ","+strconv.Itoa(mch.Id)+",", "", -1)

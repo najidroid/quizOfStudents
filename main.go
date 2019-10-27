@@ -53,8 +53,8 @@ func main() {
 		beego.BConfig.WebConfig.StaticDir["/swagger"] = "swagger"
 	}
 
-	SetSchools()
 	SetQuestions()
+	SetSchools()
 
 	beego.Run()
 
@@ -88,7 +88,7 @@ func SetQuestions() {
 	if len(questions) != 0 {
 		return
 	}
-	file, e := ioutil.ReadFile("./questions.json")
+	file, e := ioutil.ReadFile("./501-questions.json")
 	if e != nil {
 		fmt.Printf("File error: %v\n", e)
 		os.Exit(1)
@@ -96,10 +96,11 @@ func SetQuestions() {
 	err1 := json.Unmarshal(file, &questions)
 	if err1 != nil {
 		fmt.Println(err1)
+
 	}
 	for _, item := range questions {
 		_, err := orm.NewOrm().Insert(item)
-		//		fmt.Println(item)
+		fmt.Println(item)
 		if err != nil {
 			fmt.Println(err)
 		}
